@@ -9,7 +9,7 @@ arch:
   - aarch64
   - amd64
   - i386
-url: https://github.com/clipman/kocom.py
+url: https://github.com/sosohage2/kocom.py
 startup: application
 boot: auto
 uart: true
