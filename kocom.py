@@ -424,18 +424,20 @@ def mqtt_on_message(mqttc, obj, msg):
 
     # light on/off : kocom/livingroom/light/1/command
     elif 'light' in topic_d:
-        dev_id = device_h_dic['light'] + room_h_dic.get(topic_d[1])
+        room_name = topic_d[1]  # 방 이름 추출
+        light_count = 2 if room_name == 'bedroom' else 3  # 방별 조명 개수 설정
+        dev_id = device_h_dic['light'] + room_h_dic.get(room_name)
         value = query(dev_id)['value']
         onoff_hex = 'ff' if command == 'on' else '00'
         light_id = int(topic_d[3])
 
-        # turn on/off multiple lights at once : e.g) kocom/livingroom/light/12/command
-        while light_id > 0:
-            n = light_id % 10
-            value = value[:n*2-2]+ onoff_hex + value[n*2:]
-            light_id = int(light_id/10)
+        # turn on/off specified lights
+        for n in range(1, light_count + 1):
+            if n == light_id:  # 현재 조명 ID와 일치하는 경우만 처리
+                value = value[:n * 2 - 2] + onoff_hex + value[n * 2:]
+                break  # 해당 조명만 수정 후 반복문 종료
 
-        send_wait_response(dest=dev_id, value=value, log='light')
+        send_wait_response(dest=dev_id, value=value, log=f'{room_name} light {light_id}')
 
     # gas off : kocom/livingroom/gas/command
     elif 'gas' in topic_d:
@@ -579,7 +581,7 @@ def publish_discovery(dev, sub=''):
             'qos': 0,
             'uniq_id': '{}_{}_{}'.format('kocom', 'wallpad', dev),
             'device': {
-                'name': '코콤 스마트 월패드',
+                'name': 'k_pad',
                 'ids': 'kocom_smart_wallpad',
                 'mf': 'KOCOM',
                 'mdl': '스마트 월패드',
@@ -602,7 +604,7 @@ def publish_discovery(dev, sub=''):
             'qos': 0,
             'uniq_id': '{}_{}_{}'.format('kocom', 'wallpad', dev),
             'device': {
-                'name': '코콤 스마트 월패드',
+                'name': 'k_pad',
                 'ids': 'kocom_smart_wallpad',
                 'mf': 'KOCOM',
                 'mdl': '스마트 월패드',
@@ -625,7 +627,7 @@ def publish_discovery(dev, sub=''):
             'qos': 0,
             'uniq_id': '{}_{}_{}'.format('kocom', 'wallpad', dev),
             'device': {
-                'name': '코콤 스마트 월패드',
+                'name': 'k_pad',
                 'ids': 'kocom_smart_wallpad',
                 'mf': 'KOCOM',
                 'mdl': '스마트 월패드',
@@ -652,7 +654,7 @@ def publish_discovery(dev, sub=''):
                 'qos': 0,
                 'uniq_id': f'kocom_{room_name}_light{num}',
                 'device': {
-                    'name': '코콤 스마트 월패드',
+                    'name': 'k_pad',
                     'ids': 'kocom_smart_wallpad',
                     'mf': 'KOCOM',
                     'mdl': '스마트 월패드',
@@ -686,7 +688,7 @@ def publish_discovery(dev, sub=''):
             'qos': 0,
             'uniq_id': '{}_{}_{}{}'.format('kocom', 'wallpad', dev, num),
             'device': {
-                'name': '코콤 스마트 월패드',
+                'name': 'k_pad',
                 'ids': 'kocom_smart_wallpad',
                 'mf': 'KOCOM',
                 'mdl': '스마트 월패드',
@@ -705,7 +707,7 @@ def publish_discovery(dev, sub=''):
             'qos': 0,
             'uniq_id': '{}_{}_{}'.format('kocom', 'wallpad', dev),
             'device': {
-                'name': '코콤 스마트 월패드',
+                'name': 'k_pad',
                 'ids': 'kocom_smart_wallpad',
                 'mf': 'KOCOM',
                 'mdl': '스마트 월패드',
