@@ -297,7 +297,7 @@ def light_parse(value, light_count):
     ret = {}
     value_list = [value[i:i+2] for i in range(0, len(value), 2)]  # 2자리씩 나눔
     for i in range(1, light_count + 1):
-        ret[f'light_{i}'] = 'on' if value_list[i - 1] == 'FF' else 'off'
+        ret[f'light{i}'] = 'on' if value_list[i - 1] == 'FF' else 'off'
     return ret
 
 
@@ -534,23 +534,23 @@ def packet_processor(p):
         if p['dest'] == 'thermo' and p['cmd']=='state':
         #if p['src'] == 'thermo' and p['cmd']=='state':
             state = thermo_parse(p['value'])
-            logtxt='[MQTT publish|thermo] room{} data[{}]'.format(p['dest_subid'], state)
+            logtxt='[MQTT publish:thermo] room{} data[{}]'.format(p['dest_subid'], state)
             mqttc.publish("kocom/room/thermo/" + p['dest_subid'] + "/state", json.dumps(state))
         elif p['dest'] == 'light' and p['cmd'] == 'state':
             room_name = room_t_dic.get(p['src_subid'], 'unknown')  # 방 이름 확인
             light_count = 2 if room_name == 'bedroom' else 3  # 방별 조명 개수 설정
             state = light_parse(p['value'], light_count)  # 상태 파싱
-            logtxt = f'[MQTT publish|light|{room_name}] data[{state}]'
+            logtxt = f'[MQTT publish::light::{room_name}] data[{state}]'
             mqttc.publish(f'kocom/{room_name}/light/state', json.dumps(state))
         elif p['dest'] == 'fan' and p['cmd']=='state':
         #elif p['src'] == 'fan' and p['cmd']=='state':
             state = fan_parse(p['value'])
-            logtxt='[MQTT publish|fan] data[{}]'.format(state)
+            logtxt='[MQTT publish::fan] data[{}]'.format(state)
             mqttc.publish("kocom/livingroom/fan/state", json.dumps(state))    
         elif p['dest'] == 'gas':
         #elif p['src'] == 'gas':
             state = {'state': p['cmd']}
-            logtxt='[MQTT publish|gas] data[{}]'.format(state)
+            logtxt='[MQTT publish::gas] data[{}]'.format(state)
             mqttc.publish("kocom/livingroom/gas/state", json.dumps(state))
     elif p['type']=='send' and p['dest']=='elevator':
         floor = int(p['value'][2:4],16)
@@ -561,7 +561,7 @@ def packet_processor(p):
                 state['state'] = 'off'
         else:
             state = {'state': 'off'}
-        logtxt='[MQTT publish|elevator] data[{}]'.format(state)
+        logtxt='[MQTT publish::elevator] data[{}]'.format(state)
         mqttc.publish("kocom/myhome/elevator/state", json.dumps(state))
         # aa5530bc0044000100010300000000000000350d0d
 
