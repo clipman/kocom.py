@@ -290,17 +290,11 @@ def thermo_parse(value):
     return ret
 
 
-def light_parse(value, light_count):
-    """
-    조명 상태를 파싱하여 JSON 형태로 반환
-    """
+def light_parse(value):
     ret = {}
-    value_list = [value[i:i+2] for i in range(0, len(value), 2)]  # 2자리씩 나눔
-    for i in range(1, light_count + 1):
-        ret[f'light{i}'] = 'on' if value_list[i - 1] == 'FF' else 'off'
+    for i in range(1, int(config.get('User', 'light_count'))+1):
+        ret['light_'+str(i)] = 'off' if value[i*2-2:i*2] == '00' else 'on'
     return ret
-
-
 
 
 def fan_parse(value):
@@ -539,7 +533,7 @@ def packet_processor(p):
         elif p['dest'] == 'light' and p['cmd'] == 'state':
             room_name = room_t_dic.get(p['src_subid'], 'unknown')  # 방 이름 확인
             light_count = 2 if room_name == 'bedroom' else 3  # 방별 조명 개수 설정
-            state = light_parse(p['value'], light_count)  # 상태 파싱
+            state = light_parse(p['value'])  # 상태 파싱
             logtxt = f'[MQTT publish::light::{room_name}] data[{state}]'
             mqttc.publish(f'kocom/{room_name}/light/state', json.dumps(state))
         elif p['dest'] == 'fan' and p['cmd']=='state':
@@ -668,7 +662,7 @@ def publish_discovery(dev, sub=''):
                 'name': f'Kocom {room_name.capitalize()} Light{num}',
                 'cmd_t': f'kocom/{room_name}/light/{num}/command',
                 'stat_t': f'kocom/{room_name}/light/state',
-                'stat_val_tpl': f'{{{{ value_json.light{num} }}}}',
+                'stat_val_tpl': f'{{ value_json.light_{num} }}',
                 'pl_on': 'on',
                 'pl_off': 'off',
                 'qos': 0,
