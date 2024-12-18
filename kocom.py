@@ -290,11 +290,10 @@ def thermo_parse(value):
     return ret
 
 
-def light_parse(value, light_count):
-    ret = {'state': 'off' if all(value[i:i+2] == '00' for i in range(0, len(value), 2)) else 'on'}
-    value_list = [value[i:i+2] for i in range(0, len(value), 2)]
-    for i in range(1, light_count + 1):
-        ret[f'light_{i}'] = 'on' if value_list[i - 1] == 'FF' else 'off'
+def light_parse(value):
+    ret = {}
+    for i in range(1, int(config.get('User', 'light_count'))+1):
+        ret['light_'+str(i)] = 'off' if value[i*2-2:i*2] == '00' else 'on'
     return ret
 
 
@@ -425,32 +424,20 @@ def mqtt_on_message(mqttc, obj, msg):
         value = '1100' + settemp_hex + '0000000000'
         send_wait_response(dest=dev_id, value=value, log='thermo settemp')
 
-    # light on/off : kocom/bedroom/light/2/command
+    # light on/off : kocom/livingroom/light/1/command
     elif 'light' in topic_d:
-        room_name = topic_d[1]  # 방 이름 추출
-        dev_id = device_h_dic['light'] + room_h_dic.get(room_name)  # 장치 ID 생성
-        
-        # 현재 상태 가져오기
-        current_state = query(dev_id)['value']
-        onoff_hex = 'FF' if command == 'on' else '00'  # 명령에 따라 FF(on), 00(off)
-        light_id = int(topic_d[3])  # 조명 ID 가져오기
-    
-        # 방별 조명 개수 설정
-        light_count = 2 if room_name == 'bedroom' else 3  # bedroom은 2개, livingroom은 3개
-        
-        # 현재 상태를 2자리씩 나눔
-        value_list = [current_state[i:i+2] for i in range(0, len(current_state), 2)]
-        
-        if 1 <= light_id <= light_count:
-            # 특정 조명 ID의 상태를 변경
-            value_list[light_id - 1] = onoff_hex
-            updated_state = ''.join(value_list)  # 수정된 상태를 다시 결합
-        else:
-            logging.error(f'Invalid light ID: {light_id} for room: {room_name}')
-            return
-    
-        # RS485로 명령 전송
-        send_wait_response(dest=dev_id, value=updated_state, log=f'{room_name} light {light_id}')
+        dev_id = device_h_dic['light'] + room_h_dic.get(topic_d[1])
+        value = query(dev_id)['value']
+        onoff_hex = 'ff' if command == 'on' else '00'
+        light_id = int(topic_d[3])
+
+        # turn on/off multiple lights at once : e.g) kocom/livingroom/light/12/command
+        while light_id > 0:
+            n = light_id % 10
+            value = value[:n*2-2]+ onoff_hex + value[n*2:]
+            light_id = int(light_id/10)
+
+        send_wait_response(dest=dev_id, value=value, log='light')
 
 
 
