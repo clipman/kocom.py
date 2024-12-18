@@ -290,12 +290,15 @@ def thermo_parse(value):
     return ret
 
 
-def light_parse(value):
+def light_parse(value, light_count):
+    """
+    조명 상태를 파싱하여 JSON 형태로 반환
+    """
     ret = {}
-    for i in range(1, int(config.get('User', 'light_count'))+1):
-        ret['light_'+str(i)] = 'off' if value[i*2-2:i*2] == '00' else 'on'
+    value_list = [value[i:i+2] for i in range(0, len(value), 2)]  # 2자리씩 나눔
+    for i in range(1, light_count + 1):
+        ret[f'light_{i}'] = 'on' if value_list[i - 1] == 'FF' else 'off'
     return ret
-
 
 def fan_parse(value):
     preset_dic = {'40':'Low', '80':'Medium', 'c0':'High'}
@@ -422,22 +425,35 @@ def mqtt_on_message(mqttc, obj, msg):
         value = '1100' + settemp_hex + '0000000000'
         send_wait_response(dest=dev_id, value=value, log='thermo settemp')
 
-    # light on/off : kocom/livingroom/light/1/command
+    # light on/off : kocom/bedroom/light/2/command
     elif 'light' in topic_d:
         room_name = topic_d[1]  # 방 이름 추출
-        light_count = 2 if room_name == 'bedroom' else 3  # 방별 조명 개수 설정
-        dev_id = device_h_dic['light'] + room_h_dic.get(room_name)
-        value = query(dev_id)['value']
-        onoff_hex = 'ff' if command == 'on' else '00'
-        light_id = int(topic_d[3])
+        dev_id = device_h_dic['light'] + room_h_dic.get(room_name)  # 장치 ID 생성
+        
+        # 현재 상태 가져오기
+        current_state = query(dev_id)['value']
+        onoff_hex = 'FF' if command == 'on' else '00'  # 명령에 따라 FF(on), 00(off)
+        light_id = int(topic_d[3])  # 조명 ID 가져오기
+    
+        # 방별 조명 개수 설정
+        light_count = 2 if room_name == 'bedroom' else 3  # bedroom은 2개, livingroom은 3개
+        
+        # 현재 상태를 2자리씩 나눔
+        value_list = [current_state[i:i+2] for i in range(0, len(current_state), 2)]
+        
+        if 1 <= light_id <= light_count:
+            # 특정 조명 ID의 상태를 변경
+            value_list[light_id - 1] = onoff_hex
+            updated_state = ''.join(value_list)  # 수정된 상태를 다시 결합
+        else:
+            logging.error(f'Invalid light ID: {light_id} for room: {room_name}')
+            return
+    
+        # RS485로 명령 전송
+        send_wait_response(dest=dev_id, value=updated_state, log=f'{room_name} light {light_id}')
 
-        # turn on/off specified lights
-        for n in range(1, light_count + 1):
-            if n == light_id:  # 현재 조명 ID와 일치하는 경우만 처리
-                value = value[:n * 2 - 2] + onoff_hex + value[n * 2:]
-                break  # 해당 조명만 수정 후 반복문 종료
 
-        send_wait_response(dest=dev_id, value=value, log=f'{room_name} light {light_id}')
+
 
     # gas off : kocom/livingroom/gas/command
     elif 'gas' in topic_d:
@@ -517,11 +533,12 @@ def packet_processor(p):
             state = thermo_parse(p['value'])
             logtxt='[MQTT publish|thermo] room{} data[{}]'.format(p['dest_subid'], state)
             mqttc.publish("kocom/room/thermo/" + p['dest_subid'] + "/state", json.dumps(state))
-        elif p['dest'] == 'light' and p['cmd']=='state':
-        #elif p['src'] == 'light' and p['cmd']=='state':
-            state = light_parse(p['value'])
-            logtxt='[MQTT publish|light] data[{}]'.format(state)
-            mqttc.publish("kocom/livingroom/light/state", json.dumps(state))
+        elif p['dest'] == 'light' and p['cmd'] == 'state':
+            room_name = room_t_dic.get(p['src_subid'], 'unknown')  # 방 이름 확인
+            light_count = 2 if room_name == 'bedroom' else 3  # 방별 조명 개수 설정
+            state = light_parse(p['value'], light_count)  # 상태 파싱
+            logtxt = f'[MQTT publish|light|{room_name}] data[{state}]'
+            mqttc.publish(f'kocom/{room_name}/light/state', json.dumps(state))
         elif p['dest'] == 'fan' and p['cmd']=='state':
         #elif p['src'] == 'fan' and p['cmd']=='state':
             state = fan_parse(p['value'])
