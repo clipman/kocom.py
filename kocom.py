@@ -672,8 +672,15 @@ def publish_discovery(dev, sub=''):
                     'mf': 'KOCOM',
                     'mdl': 'K_PAD',
                     'sw': SW_VERSION
-                }
+                },
+                # Home Assistant가 onoff를 제대로 처리할 수 있도록 추가된 부분
+                'supported_color_modes': ['onoff'],
+                'color_mode': 'onoff',
+                'retain': False,  # 상태 저장 비활성화
+                'optimistic': False  # 상태 피드백 활성화
             }
+
+
             logtxt = f'[MQTT Discovery|{dev}{num}] data[{topic}]'
             mqttc.publish(topic, json.dumps(payload))
             if logtxt != "" and config.get('Log', 'show_mqtt_publish') == 'True':
