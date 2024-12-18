@@ -607,8 +607,6 @@ def publish_discovery(dev, sub=''):
                 'mdl': 'K_PAD',
                 'sw': SW_VERSION
             },
-            # 필요 시 팬처럼 지원 속성 추가
-            'supported_color_modes': ['onoff']
         }
         logtxt='[MQTT Discovery|{}] data[{}]'.format(dev, topic)
         mqttc.publish(topic, json.dumps(payload))
@@ -670,11 +668,11 @@ def publish_discovery(dev, sub=''):
                 'name': f'Kocom {room_name.capitalize()} Light{num}',
                 'cmd_t': f'kocom/{room_name}/light/{num}/command',
                 'stat_t': f'kocom/{room_name}/light/state',
-                'stat_val_tpl': f'{{{{ value_json.light_{num} }}}}',
+                'stat_val_tpl': f'{{{{ value_json.light{num} }}}}',
                 'pl_on': 'on',
                 'pl_off': 'off',
                 'qos': 0,
-                'uniq_id': f'kocom_{room_name}_switch_{num}',
+                'uniq_id': f'kocom_{room_name}_light{num}',
                 'device': {
                     'name': 'k_pad',
                     'ids': 'kocom_smart_wallpad',
