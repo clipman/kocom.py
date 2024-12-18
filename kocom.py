@@ -295,10 +295,12 @@ def light_parse(value, light_count):
     조명 상태를 파싱하여 JSON 형태로 반환
     """
     ret = {}
-    value_list = [value[i:i+2] for i in range(0, len(value), 2)]  # 2자리씩 나눔
-    for i in range(1, light_count + 1):
-        ret[f'light_{i}'] = 'on' if value_list[i - 1] == 'FF' else 'off'
+    for i in range(light_count):
+        # 각 조명의 상태는 2자리씩 슬라이싱
+        light_status = value[i * 2:(i * 2) + 2].upper()  # FF인지 확인하기 위해 대문자로 변환
+        ret[f'light_{i + 1}'] = 'on' if light_status == 'FF' else 'off'
     return ret
+
 
 def fan_parse(value):
     preset_dic = {'40':'Low', '80':'Medium', 'c0':'High'}
