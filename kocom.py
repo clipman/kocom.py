@@ -506,7 +506,7 @@ def mqtt_on_message(mqttc, obj, msg):
     # kocom/livingroom/fan/command
     elif 'fan' in topic_d:
         dev_id = device_h_dic['fan'] + room_h_dic.get(topic_d[1])
-        onoff_dic = {'off':'1000', 'on':'1100'}  #onoff_dic = {'off':'0000', 'on':'1101'}
+        onoff_dic = {'off':'0001', 'on':'1101'}  #onoff_dic = {'off':'0000', 'on':'1101'}
         speed_dic = {'Low':'40', 'Medium':'80', 'High':'c0'}
         init_fan_mode = config.get('User', 'init_fan_mode')
         if command in onoff_dic.keys(): # fan on off with previous speed 
@@ -665,7 +665,7 @@ def publish_discovery(dev, sub=''):
         # sub 값에 따라 light_count 동적으로 설정
         light_count = 2 if room_name == 'bedroom' else 3  # bedroom은 2개, 그 외는 3개
         for num in range(1, light_count + 1):  # 조명 개수만큼 반복
-            topic = f'homeassistant/light/kocom_{room_name}_light{num}/config'
+            topic = f'homeassistant/switch/kocom_{room_name}_light{num}/config'
             payload = {
                 'name': f'Kocom {room_name.capitalize()} Light{num}',
                 'cmd_t': f'kocom/{room_name}/light/{num}/command',
@@ -674,7 +674,7 @@ def publish_discovery(dev, sub=''):
                 'pl_on': 'on',
                 'pl_off': 'off',
                 'qos': 0,
-                'uniq_id': f'kocom_{room_name}_light_{num}',
+                'uniq_id': f'kocom_{room_name}_switch_{num}',
                 'device': {
                     'name': 'k_pad',
                     'ids': 'kocom_smart_wallpad',
@@ -683,7 +683,7 @@ def publish_discovery(dev, sub=''):
                     'sw': SW_VERSION
                 }
             }
-            logtxt = f'[MQTT Discovery|{dev}{num}] data[{topic}]'
+            logtxt = f'[MQTT Discovery|switch{num}] data[{topic}]'
             mqttc.publish(topic, json.dumps(payload))
             if logtxt != "" and config.get('Log', 'show_mqtt_publish') == 'True':
                 logging.info(logtxt)
