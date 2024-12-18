@@ -291,15 +291,12 @@ def thermo_parse(value):
 
 
 def light_parse(value, light_count):
-    """
-    조명 상태를 파싱하여 JSON 형태로 반환
-    """
-    ret = {}
-    for i in range(light_count):
-        # 각 조명의 상태는 2자리씩 슬라이싱
-        light_status = value[i * 2:(i * 2) + 2].upper()  # FF인지 확인하기 위해 대문자로 변환
-        ret[f'light_{i + 1}'] = 'on' if light_status == 'FF' else 'off'
+    ret = {'state': 'off' if all(value[i:i+2] == '00' for i in range(0, len(value), 2)) else 'on'}
+    value_list = [value[i:i+2] for i in range(0, len(value), 2)]
+    for i in range(1, light_count + 1):
+        ret[f'light_{i}'] = 'on' if value_list[i - 1] == 'FF' else 'off'
     return ret
+
 
 
 def fan_parse(value):
@@ -586,26 +583,23 @@ def publish_discovery(dev, sub=''):
     if dev == 'fan':
         topic = 'homeassistant/fan/kocom_wallpad_fan/config'
         payload = {
-            'name': 'Kocom Wallpad Fan',
-            'cmd_t': 'kocom/livingroom/fan/command',
-            'stat_t': 'kocom/livingroom/fan/state',
-            'stat_val_tpl': '{{ value_json.state }}',
-            'pr_mode_stat_t': 'kocom/livingroom/fan/state',
-            'pr_mode_val_tpl': '{{ value_json.preset }}',
-            'pr_mode_cmd_t': 'kocom/livingroom/fan/set_preset_mode/command',
-            'pr_mode_cmd_tpl': '{{ value }}',
-            'pr_modes': ['Off', 'Low', 'Medium', 'High'],
+            'name': f'Kocom {room_name.capitalize()} Light{num}',
+            'cmd_t': f'kocom/{room_name}/light/{num}/command',
+            'stat_t': f'kocom/{room_name}/light/state',
+            'stat_val_tpl': '{{ value_json.state }}',  # 단일 state 필드 참조
             'pl_on': 'on',
             'pl_off': 'off',
             'qos': 0,
-            'uniq_id': '{}_{}_{}'.format('kocom', 'wallpad', dev),
+            'uniq_id': f'kocom_{room_name}_light_{num}',
             'device': {
                 'name': 'k_pad',
                 'ids': 'kocom_smart_wallpad',
                 'mf': 'KOCOM',
                 'mdl': 'K_PAD',
                 'sw': SW_VERSION
-            }
+            },
+            # 필요 시 팬처럼 지원 속성 추가
+            'supported_color_modes': ['onoff']
         }
         logtxt='[MQTT Discovery|{}] data[{}]'.format(dev, topic)
         mqttc.publish(topic, json.dumps(payload))
