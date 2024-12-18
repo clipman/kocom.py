@@ -291,8 +291,11 @@ def thermo_parse(value):
 
 
 def light_parse(value, light_count):
-    ret = {'state': 'off' if all(value[i:i+2] == '00' for i in range(0, len(value), 2)) else 'on'}
-    value_list = [value[i:i+2] for i in range(0, len(value), 2)]
+    """
+    조명 상태를 파싱하여 JSON 형태로 반환
+    """
+    ret = {}
+    value_list = [value[i:i+2] for i in range(0, len(value), 2)]  # 2자리씩 나눔
     for i in range(1, light_count + 1):
         ret[f'light_{i}'] = 'on' if value_list[i - 1] == 'FF' else 'off'
     return ret
