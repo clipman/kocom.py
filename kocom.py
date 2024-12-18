@@ -652,7 +652,7 @@ def publish_discovery(dev, sub=''):
                 'pl_on': 'on',
                 'pl_off': 'off',
                 'qos': 0,
-                'uniq_id': f'kocom_{room_name}_light{num}',
+                'uniq_id': f'kocom_{room_name}_light_{num}',
                 'device': {
                     'name': 'k_pad',
                     'ids': 'kocom_smart_wallpad',
