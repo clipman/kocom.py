@@ -290,10 +290,14 @@ def thermo_parse(value):
     return ret
 
 
-def light_parse(value):
+def light_parse(value, light_count):
+    """
+    조명 상태를 파싱하여 JSON 형태로 반환
+    """
     ret = {}
-    for i in range(1, int(config.get('User', 'light_count'))+1):
-        ret['light_'+str(i)] = 'off' if value[i*2-2:i*2] == '00' else 'on'
+    value_list = [value[i:i+2] for i in range(0, len(value), 2)]  # 2자리씩 나눔
+    for i in range(1, light_count + 1):
+        ret[f'light_{i}'] = 'on' if value_list[i - 1] == 'FF' else 'off'
     return ret
 
 
@@ -424,20 +428,32 @@ def mqtt_on_message(mqttc, obj, msg):
         value = '1100' + settemp_hex + '0000000000'
         send_wait_response(dest=dev_id, value=value, log='thermo settemp')
 
-    # light on/off : kocom/livingroom/light/1/command
+    # light on/off : kocom/bedroom/light/2/command
     elif 'light' in topic_d:
-        dev_id = device_h_dic['light'] + room_h_dic.get(topic_d[1])
-        value = query(dev_id)['value']
-        onoff_hex = 'ff' if command == 'on' else '00'
-        light_id = int(topic_d[3])
-
-        # turn on/off multiple lights at once : e.g) kocom/livingroom/light/12/command
-        while light_id > 0:
-            n = light_id % 10
-            value = value[:n*2-2]+ onoff_hex + value[n*2:]
-            light_id = int(light_id/10)
-
-        send_wait_response(dest=dev_id, value=value, log='light')
+        room_name = topic_d[1]  # 방 이름 추출
+        dev_id = device_h_dic['light'] + room_h_dic.get(room_name)  # 장치 ID 생성
+        
+        # 현재 상태 가져오기
+        current_state = query(dev_id)['value']
+        onoff_hex = 'FF' if command == 'on' else '00'  # 명령에 따라 FF(on), 00(off)
+        light_id = int(topic_d[3])  # 조명 ID 가져오기
+    
+        # 방별 조명 개수 설정
+        light_count = 2 if room_name == 'bedroom' else 3  # bedroom은 2개, livingroom은 3개
+        
+        # 현재 상태를 2자리씩 나눔
+        value_list = [current_state[i:i+2] for i in range(0, len(current_state), 2)]
+        
+        if 1 <= light_id <= light_count:
+            # 특정 조명 ID의 상태를 변경
+            value_list[light_id - 1] = onoff_hex
+            updated_state = ''.join(value_list)  # 수정된 상태를 다시 결합
+        else:
+            logging.error(f'Invalid light ID: {light_id} for room: {room_name}')
+            return
+    
+        # RS485로 명령 전송
+        send_wait_response(dest=dev_id, value=updated_state, log=f'{room_name} light {light_id}')
 
 
 
@@ -645,56 +661,32 @@ def publish_discovery(dev, sub=''):
         if logtxt != "" and config.get('Log', 'show_mqtt_publish') == 'True':
             logging.info(logtxt)
     elif dev == 'light':
-        for num in range(1, int(config.get('User', 'light_count'))+1):
-            #ha_topic = 'homeassistant/light/kocom_livingroom_light1/config'
-            topic = 'homeassistant/light/kocom_livingroom_light{}/config'.format(num)
+        room_name = sub if sub else 'livingroom'  # 방 이름 기본값은 livingroom
+        # sub 값에 따라 light_count 동적으로 설정
+        light_count = 2 if room_name == 'bedroom' else 3  # bedroom은 2개, 그 외는 3개
+        for num in range(1, light_count + 1):  # 조명 개수만큼 반복
+            topic = f'homeassistant/light/kocom_{room_name}_light{num}/config'
             payload = {
-                'name': 'Kocom Livingroom Light{}'.format(num),
-                'cmd_t': 'kocom/livingroom/light/{}/command'.format(num),
-                'stat_t': 'kocom/livingroom/light/state',
-                'stat_val_tpl': '{{ value_json.light_' + str(num) + ' }}',
+                'name': f'Kocom {room_name.capitalize()} Light{num}',
+                'cmd_t': f'kocom/{room_name}/light/{num}/command',
+                'stat_t': f'kocom/{room_name}/light/state',
+                'stat_val_tpl': f'{{{{ value_json.light_{num} }}}}',
                 'pl_on': 'on',
                 'pl_off': 'off',
                 'qos': 0,
-                'uniq_id': '{}_{}_{}{}'.format('kocom', 'wallpad', dev, num),
+                'uniq_id': f'kocom_{room_name}_light_{num}',
                 'device': {
-                    'name': '코콤 스마트 월패드',
+                    'name': 'k_pad',
                     'ids': 'kocom_smart_wallpad',
                     'mf': 'KOCOM',
-                    'mdl': '스마트 월패드',
+                    'mdl': 'K_PAD',
                     'sw': SW_VERSION
                 }
             }
-            logtxt='[MQTT Discovery|{}{}] data[{}]'.format(dev, num, topic)
+            logtxt = f'[MQTT Discovery|{dev}{num}] data[{topic}]'
             mqttc.publish(topic, json.dumps(payload))
             if logtxt != "" and config.get('Log', 'show_mqtt_publish') == 'True':
                 logging.info(logtxt)
-             
-        for num in range(1, int(config.get('User', 'light_count'))):
-            #ha_topic = 'homeassistant/light/kocom_bedroom_light1/config'
-            topic = 'homeassistant/light/kocom_bedroom_light{}/config'.format(num)
-            payload = {
-                'name': 'Kocom bedroom Light{}'.format(num),
-                'cmd_t': 'kocom/bedroom/light/{}/command'.format(num),
-                'stat_t': 'kocom/bedroom/light/state',
-                'stat_val_tpl': '{{ value_json.light_' + str(num) + ' }}',
-                'pl_on': 'on',
-                'pl_off': 'off',
-                'qos': 0,
-                'uniq_id': '{}_{}_{}{}'.format('kocom', 'wallpad', dev, num),
-                'device': {
-                    'name': '코콤 스마트 월패드',
-                    'ids': 'kocom_smart_wallpad',
-                    'mf': 'KOCOM',
-                    'mdl': '스마트 월패드',
-                    'sw': SW_VERSION
-                }
-            }
-            logtxt='[MQTT Discovery|{}{}] data[{}]'.format(dev, num, topic)
-            mqttc.publish(topic, json.dumps(payload))
-            if logtxt != "" and config.get('Log', 'show_mqtt_publish') == 'True':
-                logging.info(logtxt)
-
     elif dev == 'thermo':
         num= int(room_h_dic.get(sub))
         #ha_topic = 'homeassistant/climate/kocom_livingroom_thermostat/config'
