@@ -658,40 +658,55 @@ def publish_discovery(dev, sub=''):
         if logtxt != "" and config.get('Log', 'show_mqtt_publish') == 'True':
             logging.info(logtxt)
     elif dev == 'light':
-        room_name = sub if sub else 'livingroom'  # 방 이름 기본값은 livingroom
-        # sub 값에 따라 light_count 동적으로 설정
-        light_count = 2 if room_name == 'bedroom' else 3  # bedroom은 2개, 그 외는 3개
-        for num in range(1, light_count + 1):  # 조명 개수만큼 반복
-            topic = f'homeassistant/light/kocom_{room_name}_light{num}/config'
+        for num in range(1, int(config.get('User', 'light_count'))+1):
+            #ha_topic = 'homeassistant/light/kocom_livingroom_light1/config'
+            topic = 'homeassistant/light/kocom_livingroom_light{}/config'.format(num)
             payload = {
-                'name': f'Kocom {room_name.capitalize()} Light{num}',
-                'cmd_t': f'kocom/{room_name}/light/{num}/command',
-                'stat_t': f'kocom/{room_name}/light/state',
-                'stat_val_tpl': f'{{{{ value_json.light_{num} }}}}',
+                'name': 'Kocom Livingroom Light{}'.format(num),
+                'cmd_t': 'kocom/livingroom/light/{}/command'.format(num),
+                'stat_t': 'kocom/livingroom/light/state',
+                'stat_val_tpl': '{{ value_json.light_' + str(num) + ' }}',
                 'pl_on': 'on',
                 'pl_off': 'off',
                 'qos': 0,
-                'uniq_id': f'kocom_{room_name}_light_{num}',
+                'uniq_id': '{}_{}_{}{}'.format('kocom', 'wallpad', dev, num),
                 'device': {
-                    'name': 'k_pad',
+                    'name': '코콤 스마트 월패드',
                     'ids': 'kocom_smart_wallpad',
                     'mf': 'KOCOM',
-                    'mdl': 'K_PAD',
+                    'mdl': '스마트 월패드',
                     'sw': SW_VERSION
-                },
-                # Home Assistant가 onoff를 제대로 처리할 수 있도록 추가된 부분
-                'supported_color_modes': ['onoff'],
-                'color_mode': 'onoff',
-                'retain': False,  # 상태 저장 비활성화
-                'optimistic': False  # 상태 피드백 활성화
+                }
             }
-
-
-            logtxt = f'[MQTT Discovery|{dev}{num}] data[{topic}]'
+            logtxt='[MQTT Discovery|{}{}] data[{}]'.format(dev, num, topic)
             mqttc.publish(topic, json.dumps(payload))
             if logtxt != "" and config.get('Log', 'show_mqtt_publish') == 'True':
                 logging.info(logtxt)
-
+             
+        for num in range(1, int(config.get('User', 'light_count'))):
+            #ha_topic = 'homeassistant/light/kocom_bedroom_light1/config'
+            topic = 'homeassistant/light/kocom_bedroom_light{}/config'.format(num)
+            payload = {
+                'name': 'Kocom bedroom Light{}'.format(num),
+                'cmd_t': 'kocom/bedroom/light/{}/command'.format(num),
+                'stat_t': 'kocom/bedroom/light/state',
+                'stat_val_tpl': '{{ value_json.light_' + str(num) + ' }}',
+                'pl_on': 'on',
+                'pl_off': 'off',
+                'qos': 0,
+                'uniq_id': '{}_{}_{}{}'.format('kocom', 'wallpad', dev, num),
+                'device': {
+                    'name': '코콤 스마트 월패드',
+                    'ids': 'kocom_smart_wallpad',
+                    'mf': 'KOCOM',
+                    'mdl': '스마트 월패드',
+                    'sw': SW_VERSION
+                }
+            }
+            logtxt='[MQTT Discovery|{}{}] data[{}]'.format(dev, num, topic)
+            mqttc.publish(topic, json.dumps(payload))
+            if logtxt != "" and config.get('Log', 'show_mqtt_publish') == 'True':
+                logging.info(logtxt)
 
     elif dev == 'thermo':
         num= int(room_h_dic.get(sub))
