@@ -292,7 +292,7 @@ def thermo_parse(value):
 
 def light_parse(value):
     ret = {}
-    for i in range(1, int(config.get('User', 'light_count'))):
+    for i in range(1, int(config.get('User', 'light_count'))+1):
         ret['light_'+str(i)] = 'off' if value[i*2-2:i*2] == '00' else 'on'
     return ret
 
@@ -584,7 +584,7 @@ def publish_discovery(dev, sub=''):
                 'name': 'k_pad',
                 'ids': 'kocom_smart_wallpad',
                 'mf': 'KOCOM',
-                'mdl': '스마트 월패드',
+                'mdl': 'K_PAD',
                 'sw': SW_VERSION
             }
         }
@@ -607,7 +607,7 @@ def publish_discovery(dev, sub=''):
                 'name': 'k_pad',
                 'ids': 'kocom_smart_wallpad',
                 'mf': 'KOCOM',
-                'mdl': '스마트 월패드',
+                'mdl': 'K_PAD',
                 'sw': SW_VERSION
             }
         }
@@ -630,7 +630,7 @@ def publish_discovery(dev, sub=''):
                 'name': 'k_pad',
                 'ids': 'kocom_smart_wallpad',
                 'mf': 'KOCOM',
-                'mdl': '스마트 월패드',
+                'mdl': 'K_PAD',
                 'sw': SW_VERSION
             }
         }
@@ -657,7 +657,7 @@ def publish_discovery(dev, sub=''):
                     'name': 'k_pad',
                     'ids': 'kocom_smart_wallpad',
                     'mf': 'KOCOM',
-                    'mdl': '스마트 월패드',
+                    'mdl': 'K_PAD',
                     'sw': SW_VERSION
                 }
             }
@@ -691,7 +691,7 @@ def publish_discovery(dev, sub=''):
                 'name': 'k_pad',
                 'ids': 'kocom_smart_wallpad',
                 'mf': 'KOCOM',
-                'mdl': '스마트 월패드',
+                'mdl': 'K_PAD',
                 'sw': SW_VERSION
             }
         }
@@ -710,7 +710,7 @@ def publish_discovery(dev, sub=''):
                 'name': 'k_pad',
                 'ids': 'kocom_smart_wallpad',
                 'mf': 'KOCOM',
-                'mdl': '스마트 월패드',
+                'mdl': 'K_PAD',
                 'sw': SW_VERSION
             }
         }
