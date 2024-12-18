@@ -291,14 +291,12 @@ def thermo_parse(value):
 
 
 def light_parse(value, light_count):
-    """
-    조명 상태를 파싱하여 JSON 형태로 반환
-    """
-    ret = {}
-    value_list = [value[i:i+2] for i in range(0, len(value), 2)]  # 2자리씩 나눔
+    ret = {'state': 'off' if all(value[i:i+2] == '00' for i in range(0, len(value), 2)) else 'on'}
+    value_list = [value[i:i+2] for i in range(0, len(value), 2)]
     for i in range(1, light_count + 1):
         ret[f'light_{i}'] = 'on' if value_list[i - 1] == 'FF' else 'off'
     return ret
+
 
 
 
@@ -586,14 +584,19 @@ def publish_discovery(dev, sub=''):
     if dev == 'fan':
         topic = 'homeassistant/fan/kocom_wallpad_fan/config'
         payload = {
-            'name': f'Kocom {room_name.capitalize()} Light{num}',
-            'cmd_t': f'kocom/{room_name}/light/{num}/command',
-            'stat_t': f'kocom/{room_name}/light/state',
-            'stat_val_tpl': '{{ value_json.state }}',  # 단일 state 필드 참조
+            'name': 'Kocom Wallpad Fan',
+            'cmd_t': 'kocom/livingroom/fan/command',
+            'stat_t': 'kocom/livingroom/fan/state',
+            'stat_val_tpl': '{{ value_json.state }}',
+            'pr_mode_stat_t': 'kocom/livingroom/fan/state',
+            'pr_mode_val_tpl': '{{ value_json.preset }}',
+            'pr_mode_cmd_t': 'kocom/livingroom/fan/set_preset_mode/command',
+            'pr_mode_cmd_tpl': '{{ value }}',
+            'pr_modes': ['Off', 'Low', 'Medium', 'High'],
             'pl_on': 'on',
             'pl_off': 'off',
             'qos': 0,
-            'uniq_id': f'kocom_{room_name}_light_{num}',
+            'uniq_id': '{}_{}_{}'.format('kocom', 'wallpad', dev),
             'device': {
                 'name': 'k_pad',
                 'ids': 'kocom_smart_wallpad',
