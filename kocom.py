@@ -299,7 +299,7 @@ def light_parse(value):
 
 def fan_parse(value):
     preset_dic = {'40':'Low', '80':'Medium', 'c0':'High'}
-    state = 'off' if value[:2] == '10' else 'on' #state = 'off' if value[:2] == '00' else 'on'
+    state = 'off' if value[:2] == '00' else 'on' #state = 'off' if value[:2] == '00' else 'on'
     preset = 'Off' if state == 'off' else preset_dic.get(value[4:6])
     return { 'state': state, 'preset': preset}
 
@@ -471,7 +471,7 @@ def mqtt_on_message(mqttc, obj, msg):
     # kocom/livingroom/fan/set_preset_mode/command
     elif 'fan' in topic_d and 'set_preset_mode' in topic_d:
         dev_id = device_h_dic['fan'] + room_h_dic.get(topic_d[1])
-        onoff_dic = {'off':'1000', 'on':'1100'}  #onoff_dic = {'off':'0000', 'on':'1101'}
+        onoff_dic = {'off':'0001', 'on':'1101'}  #onoff_dic = {'off':'0000', 'on':'1101'}
         speed_dic = {'Off':'00', 'Low':'40', 'Medium':'80', 'High':'c0'}
         if command == 'Off':
             onoff = onoff_dic['off'] 
@@ -638,7 +638,8 @@ def publish_discovery(dev, sub=''):
             logging.info(logtxt)
     elif dev == 'light':
         room_name = sub if sub else 'livingroom'  # 방 이름 기본값은 livingroom
-        light_count = int(config.get('User', 'light_count', fallback=3))  # 조명 개수 기본값은 3
+        # sub 값에 따라 light_count 동적으로 설정
+        light_count = 2 if room_name == 'bedroom' else 3  # bedroom은 2개, 그 외는 3개
         for num in range(1, light_count + 1):  # 조명 개수만큼 반복
             topic = f'homeassistant/light/kocom_{room_name}_light{num}/config'
             payload = {
@@ -662,6 +663,7 @@ def publish_discovery(dev, sub=''):
             mqttc.publish(topic, json.dumps(payload))
             if logtxt != "" and config.get('Log', 'show_mqtt_publish') == 'True':
                 logging.info(logtxt)
+
 
     elif dev == 'thermo':
         num= int(room_h_dic.get(sub))
